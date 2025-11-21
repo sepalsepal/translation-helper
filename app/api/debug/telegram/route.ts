@@ -31,7 +31,8 @@ export async function GET() {
             success: true,
             botInfo: me,
             message: 'Test message sent successfully',
-            chatId: chatId
+            chatId: chatId,
+            tokenPrefix: token.substring(0, 5) + '...' // Show first 5 chars for verification
         });
 
     } catch (error: any) {
