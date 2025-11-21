@@ -57,10 +57,24 @@ export async function POST(request: Request) {
             await updateSheetRow(sheetName, rowNumber, 'E', 'CHAPTER_REVIEW');
         }
 
+        // Apply formatting (Column A width 500 + Wrap)
+        try {
+            const { formatSheetStructure } = await import('@/lib/googleSheets');
+            await formatSheetStructure(sheetName);
+        } catch (fmtError) {
+            console.error('Formatting error:', fmtError);
+        }
+
         // Send Telegram notification for first chapter review
         if (chapters.length > 0) {
-            const { sendChapterReviewRequest } = await import('@/lib/telegram');
-            await sendChapterReviewRequest(chapters[0], startRow, 1);
+            try {
+                console.log('Attempting to send Telegram notification...');
+                const { sendChapterReviewRequest } = await import('@/lib/telegram');
+                await sendChapterReviewRequest(chapters[0], startRow, 1);
+                console.log('Telegram notification sent successfully');
+            } catch (tgError) {
+                console.error('Failed to send Telegram notification:', tgError);
+            }
         }
 
         return NextResponse.json({

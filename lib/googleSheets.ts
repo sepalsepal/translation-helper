@@ -99,3 +99,80 @@ export async function updateSheetRow(sheetName: string, rowNumber: number, colIn
         throw error;
     }
 }
+
+export async function formatSheetStructure(sheetName: string) {
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
+        throw new Error('Missing Google Sheets credentials');
+    }
+
+    try {
+        const auth = new google.auth.GoogleAuth({
+            credentials: {
+                client_email: GOOGLE_CLIENT_EMAIL,
+                private_key: GOOGLE_PRIVATE_KEY,
+            },
+            scopes: SCOPES,
+        });
+
+        const sheets = google.sheets({ version: 'v4', auth });
+
+        // Get sheetId first (needed for batchUpdate)
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: SPREADSHEET_ID,
+        });
+
+        const sheet = spreadsheet.data.sheets?.find(
+            (s) => s.properties?.title === sheetName
+        );
+
+        if (!sheet || !sheet.properties?.sheetId) {
+            console.warn(`Sheet ${sheetName} not found, skipping formatting`);
+            return;
+        }
+
+        const sheetId = sheet.properties.sheetId;
+
+        await sheets.spreadsheets.batchUpdate({
+            spreadsheetId: SPREADSHEET_ID,
+            requestBody: {
+                requests: [
+                    // Set Column A width to 500
+                    {
+                        updateDimensionProperties: {
+                            range: {
+                                sheetId: sheetId,
+                                dimension: 'COLUMNS',
+                                startIndex: 0, // Column A
+                                endIndex: 1,
+                            },
+                            properties: {
+                                pixelSize: 500,
+                            },
+                            fields: 'pixelSize',
+                        },
+                    },
+                    // Enable text wrapping for Column A
+                    {
+                        repeatCell: {
+                            range: {
+                                sheetId: sheetId,
+                                startColumnIndex: 0,
+                                endColumnIndex: 1,
+                            },
+                            cell: {
+                                userEnteredFormat: {
+                                    wrapStrategy: 'WRAP',
+                                },
+                            },
+                            fields: 'userEnteredFormat.wrapStrategy',
+                        },
+                    },
+                ],
+            },
+        });
+        console.log('Sheet formatting applied');
+    } catch (error) {
+        console.error('Error formatting sheet:', error);
+        // Don't throw here to avoid failing the whole upload if formatting fails
+    }
+}
