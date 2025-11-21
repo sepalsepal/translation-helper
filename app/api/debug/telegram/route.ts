@@ -3,44 +3,74 @@ import TelegramBot from 'node-telegram-bot-api';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-    try {
-        const token = process.env.TELEGRAM_BOT_TOKEN;
-        const chatId = process.env.TELEGRAM_CHAT_ID;
+let tokenPrefix = '';
 
-        if (!token || !chatId) {
-            return NextResponse.json({
-                success: false,
-                error: 'Missing Telegram credentials',
-                env: {
-                    hasToken: !!token,
-                    hasChatId: !!chatId
-                }
-            }, { status: 500 });
-        }
+try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-        const bot = new TelegramBot(token, { polling: false });
+    if (token) {
+        tokenPrefix = token.substring(0, 5) + '...';
+    }
 
-        // Try to get bot info
-        const me = await bot.getMe();
-
-        // Try to send a test message
-        await bot.sendMessage(chatId, '🔔 Test notification from Translation Helper Debugger');
-
-        return NextResponse.json({
-            success: true,
-            botInfo: me,
-            message: 'Test message sent successfully',
-            chatId: chatId,
-            tokenPrefix: token.substring(0, 5) + '...' // Show first 5 chars for verification
-        });
-
-    } catch (error: any) {
-        console.error('Telegram Debug Error:', error);
+    if (!token || !chatId) {
         return NextResponse.json({
             success: false,
-            error: error.message,
-            stack: error.stack
+            error: 'Missing Telegram credentials',
+            env: {
+                hasToken: !!token,
+                hasChatId: !!chatId,
+                tokenPrefix
+            }
         }, { status: 500 });
     }
+
+    const bot = new TelegramBot(token, { polling: false });
+
+    let botInfo = null;
+    let messageSent = false;
+    let errorDetails = null;
+
+    try {
+        botInfo = await bot.getMe();
+    } catch (e: any) {
+        console.error('getMe failed:', e);
+        errorDetails = { step: 'getMe', message: e.message };
+    }
+
+    if (botInfo) {
+        try {
+            await bot.sendMessage(chatId, '🔔 Test notification from Translation Helper Debugger');
+            messageSent = true;
+        } catch (e: any) {
+            console.error('sendMessage failed:', e);
+            errorDetails = { step: 'sendMessage', message: e.message };
+        }
+    }
+
+    return NextResponse.json({
+        success: !!botInfo,
+        env: {
+            hasToken: !!token,
+            hasChatId: !!chatId,
+            tokenPrefix,
+            chatId
+        },
+        botInfo,
+        messageSent,
+        error: errorDetails ? errorDetails.message : null,
+        fullError: errorDetails
+    });
+
+} catch (error: any) {
+    console.error('Telegram Debug Error:', error);
+    return NextResponse.json({
+        success: false,
+        error: error.message,
+        stack: error.stack,
+        env: {
+            tokenPrefix
+        }
+    }, { status: 500 });
+}
 }
