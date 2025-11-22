@@ -182,31 +182,32 @@ export async function getRowData(sheetName: string, row: number, spreadsheetId?:
         throw new Error('Missing Google Sheets credentials');
     }
 
-    const auth = new JWT({
-        email: GOOGLE_CLIENT_EMAIL,
-        key: GOOGLE_PRIVATE_KEY,
-        scopes: SCOPES,
-    });
+    try {
+        const auth = new JWT({
+            email: GOOGLE_CLIENT_EMAIL,
+            key: GOOGLE_PRIVATE_KEY,
+            scopes: SCOPES,
+        });
 
-    const sheets = google.sheets({ version: 'v4', auth });
+        const sheets = google.sheets({ version: 'v4', auth });
 
-    const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: targetSpreadsheetId,
-        range: `${sheetName}!A${row}:E${row}`,
-    });
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: targetSpreadsheetId,
+            range: `${sheetName}!A${row}:E${row}`,
+        });
 
-    const values = response.data.values?.[0];
-    if (!values) return null;
+        const values = response.data.values?.[0];
+        if (!values) return null;
 
-    return {
-        sourceText: values[0] || '',
-        translatedText: values[1] || '',
-        adaptedText: values[2] || '',
-        finalText: values[3] || '',
-        status: values[4] || '',
-    };
-} catch (error) {
-    console.error('Error formatting sheet:', error);
-    // Don't throw here to avoid failing the whole upload if formatting fails
-}
+        return {
+            sourceText: values[0] || '',
+            translatedText: values[1] || '',
+            adaptedText: values[2] || '',
+            finalText: values[3] || '',
+            status: values[4] || '',
+        };
+    } catch (error) {
+        console.error('Error fetching row data:', error);
+        return null;
+    }
 }

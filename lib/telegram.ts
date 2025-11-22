@@ -77,10 +77,28 @@ export async function sendTranslationApprovalRequest(source: string, translation
     const approveData = `ap_tr:${chapterIndex}:${spreadsheetId}`;
     const rejectData = `re_tr:${chapterIndex}:${spreadsheetId}`;
 
-    await bot.sendMessage(chatId, `
-cal *Translation Approval* (Chapter ${chapterIndex + 1})
+    try {
+        await bot.sendMessage(chatId, `
+📝 *Translation Approval* (Chapter ${chapterIndex + 1})
 
 *Source:*
+${source}
+
+*Translation:*
+${translation}
+
+_Is this translation accurate?_
+`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '✅ Approve', callback_data: approveData },
+                    { text: '❌ Reject', callback_data: rejectData }
+                ]]
+            }
+        });
+    } catch (error) {
+        console.error('Error sending translation approval request:', error);
     }
 }
 
@@ -93,31 +111,37 @@ export async function sendAdaptationApprovalRequest(translation: string, adaptat
 
     const bot = new TelegramBot(token, { polling: false });
 
-    const approveData = `ap_ad: ${ chapterIndex }: ${ spreadsheetId }`;
-    const rejectData = `re_ad: ${ chapterIndex }: ${ spreadsheetId }`;
+    const approveData = `ap_ad:${chapterIndex}:${spreadsheetId}`;
+    const rejectData = `re_ad:${chapterIndex}:${spreadsheetId}`;
 
-    await bot.sendMessage(chatId, `
-✨ * Adaptation Approval * (Chapter ${ chapterIndex + 1})
+    try {
+        await bot.sendMessage(chatId, `
+✨ *Adaptation Approval* (Chapter ${chapterIndex + 1})
 
-* Translation:*
-    ${ translation }
+*Translation:*
+${translation}
 
-* Adaptation:*
-    ${ adaptation }
+*Adaptation:*
+${adaptation}
 
-_Is this adaptation natural ? _
-    `, {
-        parse_mode: 'Markdown',
-        reply_markup: {
-            inline_keyboard: [[
-                { text: '✅ Approve', callback_data: approveData },
-                { text: '❌ Reject', callback_data: rejectData }
-            ]]
-        }
+_Is this adaptation natural?_
+`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '✅ Approve', callback_data: approveData },
+                    { text: '❌ Reject', callback_data: rejectData }
+                ]]
+            }
+        });
+    } catch (error) {
+        console.error('Error sending adaptation approval request:', error);
     }
 }
 
 // Legacy function for backward compatibility
 export async function sendApprovalRequest(source: string, translation: string, rowNumber: number) {
-    return sendTranslationApprovalRequest(source, translation, rowNumber);
+    const chapterIndex = rowNumber - 2;
+    const spreadsheetId = process.env.SPREADSHEET_ID || '';
+    return sendTranslationApprovalRequest(source, translation, rowNumber, chapterIndex, spreadsheetId);
 }
