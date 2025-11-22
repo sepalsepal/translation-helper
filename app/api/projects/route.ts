@@ -10,7 +10,7 @@ export async function GET() {
             return NextResponse.json({ projects: [] });
         }
 
-        const projects = await listFolders(rootFolder.id);
+        const projects = await listFolders(rootFolder.id as string);
         return NextResponse.json({ projects });
     } catch (error: any) {
         console.error('Error fetching projects:', error);

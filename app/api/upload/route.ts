@@ -45,19 +45,23 @@ export async function POST(request: Request) {
             }
         }
 
+        if (!projectFolderId) {
+            throw new Error('Failed to determine Project Folder ID');
+        }
+
         // Upload Source File
         if (file) {
             console.log('Uploading source file to Drive...');
             const buffer = Buffer.from(await file.arrayBuffer());
-            await uploadFile(file.name, buffer, file.type, projectFolderId);
+            await uploadFile(file.name, buffer, file.type, projectFolderId as string);
         } else if (url) {
             console.log('Uploading source URL to Drive...');
-            await uploadFile('source_url.txt', url, 'text/plain', projectFolderId);
+            await uploadFile('source_url.txt', url, 'text/plain', projectFolderId as string);
         }
 
         // Create Translation Spreadsheet
         console.log('Creating translation spreadsheet...');
-        const spreadsheetId = await createSpreadsheet(`${projectName} - Translation`, projectFolderId);
+        const spreadsheetId = await createSpreadsheet(`${projectName} - Translation`, projectFolderId as string);
         console.log(`Spreadsheet created: ${spreadsheetId}`);
 
         // 2. Parse Document
