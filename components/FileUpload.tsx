@@ -8,6 +8,7 @@ export default function FileUpload() {
     const [url, setUrl] = useState('');
     const [uploading, setUploading] = useState(false);
     const [mode, setMode] = useState<'file' | 'url'>('file');
+    const [projectName, setProjectName] = useState('');
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -56,6 +57,10 @@ export default function FileUpload() {
     };
 
     const handleUpload = async () => {
+        if (!projectName.trim()) {
+            alert('Please enter a Project Name');
+            return;
+        }
         if (!file && !url) {
             alert('Please select a file or enter a URL');
             return;
@@ -64,6 +69,7 @@ export default function FileUpload() {
         setUploading(true);
         try {
             const formData = new FormData();
+            formData.append('projectName', projectName.trim());
 
             if (mode === 'file' && file) {
                 formData.append('file', file);
@@ -92,6 +98,20 @@ export default function FileUpload() {
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+            {/* Project Name Input */}
+            <div className="mb-6">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Project Name
+                </label>
+                <input
+                    type="text"
+                    value={projectName}
+                    onChange={(e) => setProjectName(e.target.value)}
+                    placeholder="e.g., Marketing Brochure Q4"
+                    className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+            </div>
+
             {/* Mode Selector */}
             <div className="flex gap-2 mb-6">
                 <button
@@ -187,7 +207,7 @@ export default function FileUpload() {
             {/* Upload Button */}
             <button
                 onClick={handleUpload}
-                disabled={uploading || (!file && !url)}
+                disabled={uploading || (!file && !url) || !projectName.trim()}
                 className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
             >
                 {uploading ? (

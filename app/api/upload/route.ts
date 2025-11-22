@@ -11,15 +11,47 @@ export async function POST(request: Request) {
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
         const url = formData.get('url') as string | null;
+        const projectName = formData.get('projectName') as string | null;
 
-        if (!file && !url) {
+        if ((!file && !url) || !projectName) {
             return NextResponse.json(
-                { success: false, error: 'No file or URL provided' },
+                { success: false, error: 'Missing file, URL, or Project Name' },
                 { status: 400 }
             );
         }
 
-        // Parse document
+        // 1. Google Drive Integration
+        const { findFolder, createFolder, uploadFile, createSpreadsheet } = await import('@/lib/googleDrive');
+
+        // Find or Create Root Folder 'TransAuto'
+        let rootFolder = await findFolder('TransAuto');
+        let rootFolderId = rootFolder?.id;
+
+        if (!rootFolderId) {
+            console.log("Creating root 'TransAuto' folder...");
+            rootFolderId = await createFolder('TransAuto');
+        }
+
+        // Create Project Folder
+        console.log(`Creating project folder: ${projectName}`);
+        const projectFolderId = await createFolder(projectName, rootFolderId);
+
+        // Upload Source File
+        if (file) {
+            console.log('Uploading source file to Drive...');
+            const buffer = Buffer.from(await file.arrayBuffer());
+            await uploadFile(file.name, buffer, file.type, projectFolderId);
+        } else if (url) {
+            console.log('Uploading source URL to Drive...');
+            await uploadFile('source_url.txt', url, 'text/plain', projectFolderId);
+        }
+
+        // Create Translation Spreadsheet
+        console.log('Creating translation spreadsheet...');
+        const spreadsheetId = await createSpreadsheet(`${projectName} - Translation`, projectFolderId);
+        console.log(`Spreadsheet created: ${spreadsheetId}`);
+
+        // 2. Parse Document
         let text: string;
         if (file) {
             console.log('Parsing file:', file.name);
@@ -28,49 +60,42 @@ export async function POST(request: Request) {
             console.log('Parsing URL:', url);
             text = await parseURL(url);
         } else {
-            return NextResponse.json(
-                { success: false, error: 'Invalid input' },
-                { status: 400 }
-            );
+            throw new Error('Invalid input');
         }
 
-        // Segment into chapters
+        // 3. Segment into chapters
         const chapters = segmentIntoChapters(text);
         console.log(`Segmented into ${chapters.length} chapters`);
 
-        // Get sheet name from env or use default
+        // 4. Write to Google Sheets (using new spreadsheetId)
         const sheetName = process.env.SHEET_NAME || '시트1';
+        const startRow = 2;
 
-        // Clear existing data (optional - comment out if you want to append)
-        // For now, we'll append starting from row 2
-
-        // Write chapters to Google Sheets
-        const startRow = 2; // Assuming row 1 is header
         for (let i = 0; i < chapters.length; i++) {
             const rowNumber = startRow + i;
             const chapterText = chapters[i];
 
             // Write to Column A (Source)
-            await updateSheetRow(sheetName, rowNumber, 'A', chapterText);
+            await updateSheetRow(sheetName, rowNumber, 'A', chapterText, spreadsheetId);
 
             // Set initial stage to 'CHAPTER_REVIEW' in Column E (Status)
-            await updateSheetRow(sheetName, rowNumber, 'E', 'CHAPTER_REVIEW');
+            await updateSheetRow(sheetName, rowNumber, 'E', 'CHAPTER_REVIEW', spreadsheetId);
         }
 
-        // Apply formatting (Column A width 500 + Wrap)
+        // 5. Apply formatting
         try {
             const { formatSheetStructure } = await import('@/lib/googleSheets');
-            await formatSheetStructure(sheetName);
+            await formatSheetStructure(sheetName, spreadsheetId);
         } catch (fmtError) {
             console.error('Formatting error:', fmtError);
         }
 
-        // Send Telegram notification for first chapter review
+        // 6. Send Telegram notification
         if (chapters.length > 0) {
             try {
                 console.log('Attempting to send Telegram notification...');
                 const { sendChapterReviewRequest } = await import('@/lib/telegram');
-                await sendChapterReviewRequest(chapters[0], startRow, 1);
+                await sendChapterReviewRequest(chapters[0], startRow, 0, spreadsheetId); // chapterIndex 0
                 console.log('Telegram notification sent successfully');
             } catch (tgError) {
                 console.error('Failed to send Telegram notification:', tgError);
@@ -80,7 +105,8 @@ export async function POST(request: Request) {
         return NextResponse.json({
             success: true,
             chapterCount: chapters.length,
-            message: `Successfully uploaded and segmented into ${chapters.length} chapters. Chapter review request sent to Telegram.`,
+            spreadsheetId: spreadsheetId,
+            message: `Successfully created project "${projectName}" and uploaded ${chapters.length} chapters.`,
         });
 
     } catch (error: any) {

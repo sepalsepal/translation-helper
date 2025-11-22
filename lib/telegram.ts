@@ -26,104 +26,94 @@ export async function sendTelegramNotification(message: string) {
 }
 
 // Stage 1: Chapter Structure Review
-export async function sendChapterReviewRequest(sourceText: string, rowNumber: number, chapterNumber: number) {
-    if (!bot || !chatId) {
+export async function sendChapterReviewRequest(chapter: string, rowNumber: number, chapterIndex: number, spreadsheetId: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+
+    if (!token || !chatId) {
+        console.warn('Telegram credentials not set. Skipping chapter review request.');
         return;
     }
 
-    const message = `
-📋 *Chapter Structure Review*
-Chapter: ${chapterNumber} | Row: ${rowNumber}
+    const bot = new TelegramBot(token, { polling: false });
 
-*Source Text:*
-${sourceText.substring(0, 500)}${sourceText.length > 500 ? '...' : ''}
-  `;
-
-    const opts = {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '✅ Approve Structure', callback_data: `approve_chapter_${rowNumber}` },
-                    { text: '❌ Reject', callback_data: `reject_chapter_${rowNumber}` }
-                ]
-            ]
-        }
-    };
+    // Callback data format: action:chapterIndex:spreadsheetId
+    // Max 64 bytes. spreadsheetId is ~44 chars.
+    // action: 'ap_ch' (5) + ':' (1) + index (2) + ':' (1) + id (44) = ~53 chars. Safe.
+    const approveData = `ap_ch:${chapterIndex}:${spreadsheetId}`;
+    const rejectData = `re_ch:${chapterIndex}:${spreadsheetId}`;
 
     try {
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...opts });
+        await bot.sendMessage(chatId, `
+📝 *Chapter Structure Review* (Chapter ${chapterIndex + 1})
+
+*Source Text:*
+${chapter}
+
+_Is this segmentation correct?_
+`, {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [[
+                    { text: '✅ Approve', callback_data: approveData },
+                    { text: '❌ Reject', callback_data: rejectData }
+                ]]
+            }
+        });
     } catch (error) {
         console.error('Error sending chapter review request:', error);
     }
 }
 
 // Stage 2: Translation Approval
-export async function sendTranslationApprovalRequest(source: string, translation: string, rowNumber: number) {
-    if (!bot || !chatId) {
-        return;
-    }
+export async function sendTranslationApprovalRequest(source: string, translation: string, rowNumber: number, chapterIndex: number, spreadsheetId: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    const message = `
-🌐 *Translation Approval*
-Row: ${rowNumber}
+    if (!token || !chatId) return;
+
+    const bot = new TelegramBot(token, { polling: false });
+
+    const approveData = `ap_tr:${chapterIndex}:${spreadsheetId}`;
+    const rejectData = `re_tr:${chapterIndex}:${spreadsheetId}`;
+
+    await bot.sendMessage(chatId, `
+cal *Translation Approval* (Chapter ${chapterIndex + 1})
 
 *Source:*
-${source.substring(0, 300)}${source.length > 300 ? '...' : ''}
-
-*Translation:*
-${translation.substring(0, 300)}${translation.length > 300 ? '...' : ''}
-  `;
-
-    const opts = {
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '✅ Approve Translation', callback_data: `approve_translation_${rowNumber}` },
-                    { text: '❌ Reject', callback_data: `reject_translation_${rowNumber}` }
-                ]
-            ]
-        }
-    };
-
-    try {
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...opts });
-    } catch (error) {
-        console.error('Error sending translation approval request:', error);
     }
 }
 
 // Stage 3: Adaptation Approval
-export async function sendAdaptationApprovalRequest(translation: string, adaptation: string, rowNumber: number) {
-    if (!bot || !chatId) {
-        return;
-    }
+export async function sendAdaptationApprovalRequest(translation: string, adaptation: string, rowNumber: number, chapterIndex: number, spreadsheetId: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
 
-    const message = `
-✨ *Adaptation Approval*
-Row: ${rowNumber}
+    if (!token || !chatId) return;
 
-*Translation:*
-${translation.substring(0, 250)}${translation.length > 250 ? '...' : ''}
+    const bot = new TelegramBot(token, { polling: false });
 
-*Adaptation:*
-${adaptation.substring(0, 250)}${adaptation.length > 250 ? '...' : ''}
-  `;
+    const approveData = `ap_ad: ${ chapterIndex }: ${ spreadsheetId }`;
+    const rejectData = `re_ad: ${ chapterIndex }: ${ spreadsheetId }`;
 
-    const opts = {
+    await bot.sendMessage(chatId, `
+✨ * Adaptation Approval * (Chapter ${ chapterIndex + 1})
+
+* Translation:*
+    ${ translation }
+
+* Adaptation:*
+    ${ adaptation }
+
+_Is this adaptation natural ? _
+    `, {
+        parse_mode: 'Markdown',
         reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '✅ Approve Adaptation', callback_data: `approve_adaptation_${rowNumber}` },
-                    { text: '❌ Reject', callback_data: `reject_adaptation_${rowNumber}` }
-                ]
-            ]
+            inline_keyboard: [[
+                { text: '✅ Approve', callback_data: approveData },
+                { text: '❌ Reject', callback_data: rejectData }
+            ]]
         }
-    };
-
-    try {
-        await bot.sendMessage(chatId, message, { parse_mode: 'Markdown', ...opts });
-    } catch (error) {
-        console.error('Error sending adaptation approval request:', error);
     }
 }
 

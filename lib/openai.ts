@@ -12,7 +12,7 @@ export async function translateText(text: string, context: string = ''): Promise
 
     try {
         const response = await openai.chat.completions.create({
-            model: 'gpt-4o', // Or 'gpt-3.5-turbo' if cost is a concern
+            model: 'gpt-4o',
             messages: [
                 {
                     role: 'system',
@@ -32,6 +32,36 @@ export async function translateText(text: string, context: string = ''): Promise
         return response.choices[0].message.content || '';
     } catch (error) {
         console.error('Error translating text:', error);
+        return '';
+    }
+}
+
+export async function adaptText(text: string): Promise<string> {
+    if (!openai) {
+        return `[Mock Adaptation] ${text}`;
+    }
+
+    try {
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [
+                {
+                    role: 'system',
+                    content: `You are a professional editor for animation production content.
+          Improve the following Korean translation to be more natural, fluent, and suitable for the industry.
+          Maintain the original meaning but enhance readability and flow.`
+                },
+                {
+                    role: 'user',
+                    content: text
+                }
+            ],
+            temperature: 0.4,
+        });
+
+        return response.choices[0].message.content || '';
+    } catch (error) {
+        console.error('Error adapting text:', error);
         return '';
     }
 }

@@ -29,27 +29,33 @@ const getCleanedKey = () => {
 
 const GOOGLE_PRIVATE_KEY = getCleanedKey();
 
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
+const SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive.readonly',
+];
 
-export async function getSheetData(sheetName: string): Promise<TranslationItem[]> {
-    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
-        throw new Error('Missing Google Sheets credentials');
+const { JWT } = google.auth;
+
+export async function getSheetData(sheetName: string, spreadsheetId?: string): Promise<TranslationItem[]> {
+    const targetSpreadsheetId = spreadsheetId || SPREADSHEET_ID;
+
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !targetSpreadsheetId) {
+        throw new Error('Missing Google Sheets credentials or Spreadsheet ID');
     }
 
     try {
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: GOOGLE_CLIENT_EMAIL,
-                private_key: GOOGLE_PRIVATE_KEY,
-            },
+        const auth = new JWT({
+            email: GOOGLE_CLIENT_EMAIL,
+            key: GOOGLE_PRIVATE_KEY,
             scopes: SCOPES,
         });
 
         const sheets = google.sheets({ version: 'v4', auth });
 
         const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${sheetName}!A2:E`, // Assuming Header is Row 1. A: Source, B: Trans, C: AI, D: Status
+            spreadsheetId: targetSpreadsheetId,
+            range: `${sheetName}!A:E`, // A: Source, B: Trans, C: Adapt, D: Final, E: Status
         });
 
         const rows = response.data.values;
@@ -70,25 +76,25 @@ export async function getSheetData(sheetName: string): Promise<TranslationItem[]
     }
 }
 
-export async function updateSheetRow(sheetName: string, rowNumber: number, colIndex: string, value: string) {
-    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
+export async function updateSheetRow(sheetName: string, row: number, col: string, value: string, spreadsheetId?: string) {
+    const targetSpreadsheetId = spreadsheetId || SPREADSHEET_ID;
+
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !targetSpreadsheetId) {
         throw new Error('Missing Google Sheets credentials');
     }
 
     try {
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: GOOGLE_CLIENT_EMAIL,
-                private_key: GOOGLE_PRIVATE_KEY,
-            },
+        const auth = new JWT({
+            email: GOOGLE_CLIENT_EMAIL,
+            key: GOOGLE_PRIVATE_KEY,
             scopes: SCOPES,
         });
 
         const sheets = google.sheets({ version: 'v4', auth });
 
         await sheets.spreadsheets.values.update({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `${sheetName}!${colIndex}${rowNumber}`,
+            spreadsheetId: targetSpreadsheetId,
+            range: `${sheetName}!${col}${row}`,
             valueInputOption: 'RAW',
             requestBody: {
                 values: [[value]],
@@ -100,79 +106,107 @@ export async function updateSheetRow(sheetName: string, rowNumber: number, colIn
     }
 }
 
-export async function formatSheetStructure(sheetName: string) {
-    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !SPREADSHEET_ID) {
+export async function formatSheetStructure(sheetName: string, spreadsheetId?: string) {
+    const targetSpreadsheetId = spreadsheetId || SPREADSHEET_ID;
+
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !targetSpreadsheetId) {
         throw new Error('Missing Google Sheets credentials');
     }
 
-    try {
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: GOOGLE_CLIENT_EMAIL,
-                private_key: GOOGLE_PRIVATE_KEY,
-            },
-            scopes: SCOPES,
-        });
+    const auth = new JWT({
+        email: GOOGLE_CLIENT_EMAIL,
+        key: GOOGLE_PRIVATE_KEY,
+        scopes: SCOPES,
+    });
 
-        const sheets = google.sheets({ version: 'v4', auth });
+    const sheets = google.sheets({ version: 'v4', auth });
 
-        // Get sheetId first (needed for batchUpdate)
-        const spreadsheet = await sheets.spreadsheets.get({
-            spreadsheetId: SPREADSHEET_ID,
-        });
+    // Get sheetId (gid) for the given sheetName
+    const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId: targetSpreadsheetId,
+    });
 
-        const sheet = spreadsheet.data.sheets?.find(
-            (s) => s.properties?.title === sheetName
-        );
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
+    const sheetId = sheet?.properties?.sheetId;
 
-        if (!sheet || !sheet.properties?.sheetId) {
-            console.warn(`Sheet ${sheetName} not found, skipping formatting`);
-            return;
-        }
-
-        const sheetId = sheet.properties.sheetId;
-
-        await sheets.spreadsheets.batchUpdate({
-            spreadsheetId: SPREADSHEET_ID,
-            requestBody: {
-                requests: [
-                    // Set Column A width to 500
-                    {
-                        updateDimensionProperties: {
-                            range: {
-                                sheetId: sheetId,
-                                dimension: 'COLUMNS',
-                                startIndex: 0, // Column A
-                                endIndex: 1,
-                            },
-                            properties: {
-                                pixelSize: 500,
-                            },
-                            fields: 'pixelSize',
-                        },
-                    },
-                    // Enable text wrapping for Column A
-                    {
-                        repeatCell: {
-                            range: {
-                                sheetId: sheetId,
-                                startColumnIndex: 0,
-                                endColumnIndex: 1,
-                            },
-                            cell: {
-                                userEnteredFormat: {
-                                    wrapStrategy: 'WRAP',
-                                },
-                            },
-                            fields: 'userEnteredFormat.wrapStrategy',
-                        },
-                    },
-                ],
-            },
-        });
-        console.log('Sheet formatting applied');
-    } catch (error) {
-        console.error('Error formatting sheet:', error);
-        // Don't throw here to avoid failing the whole upload if formatting fails
+    if (sheetId === undefined) {
+        console.error(`Sheet "${sheetName}" not found`);
+        return;
     }
+
+    await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: targetSpreadsheetId,
+        requestBody: {
+            requests: [
+                // Set Column A width to 500
+                {
+                    updateDimensionProperties: {
+                        range: {
+                            sheetId: sheetId,
+                            dimension: 'COLUMNS',
+                            startIndex: 0, // Column A
+                            endIndex: 1,
+                        },
+                        properties: {
+                            pixelSize: 500,
+                        },
+                        fields: 'pixelSize',
+                    },
+                },
+                // Enable text wrapping for Column A
+                {
+                    repeatCell: {
+                        range: {
+                            sheetId: sheetId,
+                            startColumnIndex: 0,
+                            endColumnIndex: 1,
+                        },
+                        cell: {
+                            userEnteredFormat: {
+                                wrapStrategy: 'WRAP',
+                            },
+                        },
+                        fields: 'userEnteredFormat.wrapStrategy',
+                    },
+                },
+            ],
+        },
+    });
+    console.log('Sheet formatting applied');
+}
+
+export async function getRowData(sheetName: string, row: number, spreadsheetId?: string) {
+    const targetSpreadsheetId = spreadsheetId || SPREADSHEET_ID;
+
+    if (!GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY || !targetSpreadsheetId) {
+        throw new Error('Missing Google Sheets credentials');
+    }
+
+    const auth = new JWT({
+        email: GOOGLE_CLIENT_EMAIL,
+        key: GOOGLE_PRIVATE_KEY,
+        scopes: SCOPES,
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: targetSpreadsheetId,
+        range: `${sheetName}!A${row}:E${row}`,
+    });
+
+    const values = response.data.values?.[0];
+    if (!values) return null;
+
+    return {
+        sourceText: values[0] || '',
+        translatedText: values[1] || '',
+        adaptedText: values[2] || '',
+        finalText: values[3] || '',
+        status: values[4] || '',
+    };
+} catch (error) {
+    console.error('Error formatting sheet:', error);
+    // Don't throw here to avoid failing the whole upload if formatting fails
+}
 }
