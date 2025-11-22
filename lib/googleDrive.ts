@@ -47,7 +47,7 @@ export async function findFolder(name: string, parentId?: string) {
 /**
  * Create a new folder
  */
-export async function createFolder(name: string, parentId?: string) {
+export async function createFolder(name: string, parentId?: string): Promise<string> {
     const drive = await getDriveClient();
     const fileMetadata: any = {
         name,
@@ -62,6 +62,10 @@ export async function createFolder(name: string, parentId?: string) {
         requestBody: fileMetadata,
         fields: 'id',
     });
+
+    if (!file.data.id) {
+        throw new Error('Failed to create folder: No ID returned');
+    }
 
     return file.data.id;
 }
