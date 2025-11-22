@@ -16,10 +16,12 @@ export async function POST(request: Request) {
 
         // 1. Find or create root folder 'TransAuto'
         let rootFolder = await findFolder('TransAuto');
-        let rootFolderId = rootFolder?.id;
+        let rootFolderId = rootFolder?.id || undefined;
 
         if (!rootFolderId) {
-            rootFolderId = await createFolder('TransAuto');
+            const newRootId = await createFolder('TransAuto');
+            if (!newRootId) throw new Error('Failed to create root folder');
+            rootFolderId = newRootId;
         }
 
         if (!rootFolderId) {
