@@ -44,10 +44,7 @@ export async function findFolder(name: string, parentId?: string) {
     return res.data.files?.[0] || null;
 }
 
-/**
- * Create a new folder
- */
-export async function createFolder(name: string, parentId?: string): Promise<string> {
+export async function createFolder(name: string, parentId?: string): Promise<{ id: string; webViewLink?: string }> {
     const drive = await getDriveClient();
     const fileMetadata: any = {
         name,
@@ -60,14 +57,14 @@ export async function createFolder(name: string, parentId?: string): Promise<str
 
     const file = await drive.files.create({
         requestBody: fileMetadata,
-        fields: 'id',
+        fields: 'id, webViewLink',
     });
 
     if (!file.data.id) {
         throw new Error('Failed to create folder: No ID returned');
     }
 
-    return file.data.id;
+    return { id: file.data.id, webViewLink: file.data.webViewLink || undefined };
 }
 
 /**

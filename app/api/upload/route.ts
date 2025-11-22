@@ -30,15 +30,16 @@ export async function POST(request: Request) {
 
         if (!rootFolderId) {
             console.log("Creating root 'TransAuto' folder...");
-            const newRootId = await createFolder('TransAuto');
-            if (!newRootId) throw new Error('Failed to create root folder');
-            rootFolderId = newRootId;
+            const newRoot = await createFolder('TransAuto');
+            if (!newRoot.id) throw new Error('Failed to create root folder');
+            rootFolderId = newRoot.id;
         }
 
         // Get or Create Project Folder
         if (!projectFolderId && projectName) {
             console.log(`Creating project folder: ${projectName}`);
-            projectFolderId = await createFolder(projectName, rootFolderId);
+            const projectFolder = await createFolder(projectName, rootFolderId);
+            projectFolderId = projectFolder.id;
         } else if (projectFolderId) {
             console.log(`Using existing project folder ID: ${projectFolderId}`);
             // ... existing logic

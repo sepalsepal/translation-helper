@@ -109,7 +109,13 @@ export default function FileUpload() {
                 throw new Error(createData.error || '프로젝트 생성 실패');
             }
 
-            alert(`프로젝트 "${createData.projectName}"가 생성되었습니다!`);
+            let successMsg = `프로젝트 "${createData.projectName}"가 생성되었습니다!`;
+            if (createData.webViewLink) {
+                successMsg += `\n\n구글 드라이브 링크: ${createData.webViewLink}`;
+                // Open link in new tab for convenience
+                window.open(createData.webViewLink, '_blank');
+            }
+            alert(successMsg);
 
             // Refresh projects and select the new one
             const res = await fetch('/api/projects');

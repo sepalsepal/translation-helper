@@ -19,9 +19,9 @@ export async function POST(request: Request) {
         let rootFolderId = rootFolder?.id || undefined;
 
         if (!rootFolderId) {
-            const newRootId = await createFolder('TransAuto');
-            if (!newRootId) throw new Error('Failed to create root folder');
-            rootFolderId = newRootId;
+            const newRoot = await createFolder('TransAuto');
+            if (!newRoot.id) throw new Error('Failed to create root folder');
+            rootFolderId = newRoot.id;
         }
 
         if (!rootFolderId) {
@@ -29,7 +29,9 @@ export async function POST(request: Request) {
         }
 
         // 2. Create project folder
-        const projectFolderId = await createFolder(projectName, rootFolderId);
+        const projectFolder = await createFolder(projectName, rootFolderId);
+        const projectFolderId = projectFolder.id;
+
         if (!projectFolderId) {
             throw new Error('Failed to create project folder');
         }
@@ -43,6 +45,7 @@ export async function POST(request: Request) {
             projectId: projectFolderId,
             spreadsheetId,
             projectName,
+            webViewLink: projectFolder.webViewLink,
         });
 
     } catch (error: any) {
