@@ -233,16 +233,20 @@ export default function FileUpload() {
                                 className="flex-1 px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
                             />
                             <button
+                                type="button"
                                 onClick={handleCreateProject}
                                 disabled={isCreatingProject || !projectName.trim()}
-                                className="px-6 py-3.5 bg-line-dark text-white rounded-xl font-bold text-sm hover:bg-black disabled:opacity-50 transition-all whitespace-nowrap"
+                                className="px-6 py-3.5 bg-zinc-800 text-white rounded-xl font-bold text-sm hover:bg-black disabled:opacity-50 transition-all whitespace-nowrap shadow-sm"
                             >
                                 {isCreatingProject ? '생성 중...' : '생성'}
                             </button>
                         </div>
-                        <p className="text-[10px] text-gray-400 mt-2 ml-1">
-                            * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
-                        </p>
+                        <div className="flex justify-between items-center mt-2 ml-1">
+                            <p className="text-[10px] text-gray-400">
+                                * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
+                            </p>
+                            <span className="text-[10px] text-gray-300">v1.2</span>
+                        </div>
                     </div>
                 ) : (
                     <div>
