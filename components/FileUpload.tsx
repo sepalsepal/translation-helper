@@ -86,12 +86,62 @@ export default function FileUpload() {
         setFile(file);
     };
 
-    const handleUpload = async () => {
-        if (projectMode === 'new' && !projectName.trim()) {
+    const [isCreatingProject, setIsCreatingProject] = useState(false);
+
+    // ... (existing useEffect)
+
+    const handleCreateProject = async () => {
+        if (!projectName.trim()) {
             alert('프로젝트 이름을 입력해주세요.');
             return;
         }
-        if (projectMode === 'existing' && !selectedProjectId) {
+
+        setIsCreatingProject(true);
+        try {
+            const createRes = await fetch('/api/projects/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ projectName: projectName.trim() }),
+            });
+            const createData = await createRes.json();
+
+            if (!createData.success) {
+                throw new Error(createData.error || '프로젝트 생성 실패');
+            }
+
+            alert(`프로젝트 "${createData.projectName}"가 생성되었습니다!`);
+
+            // Refresh projects and select the new one
+            const res = await fetch('/api/projects');
+            const data = await res.json();
+            if (data.projects) {
+                setProjects(data.projects);
+                setSelectedProjectId(createData.projectId);
+                setProjectMode('existing'); // Switch to existing mode
+                setProjectName(''); // Clear input
+            }
+        } catch (error: any) {
+            alert('프로젝트 생성 실패: ' + error.message);
+        } finally {
+            setIsCreatingProject(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            handleCreateProject();
+        }
+    };
+
+    // ... (existing handlers: handleDragOver, handleDragLeave, handleDrop, handleFileSelect, validateAndSetFile)
+
+    const handleUpload = async () => {
+        // Validation
+        if (projectMode === 'new') {
+            alert('먼저 프로젝트를 생성해주세요.');
+            return;
+        }
+        if (!selectedProjectId) {
             alert('프로젝트를 선택해주세요.');
             return;
         }
@@ -103,34 +153,12 @@ export default function FileUpload() {
 
         setUploading(true);
         try {
-            let targetProjectId = selectedProjectId;
-            let targetProjectName = '';
+            const selectedProject = projects.find(p => p.id === selectedProjectId);
+            const targetProjectName = selectedProject ? selectedProject.name : '';
 
-            // 1. Create Project if needed
-            if (projectMode === 'new') {
-                const createRes = await fetch('/api/projects/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ projectName: projectName.trim() }),
-                });
-                const createData = await createRes.json();
-
-                if (!createData.success) {
-                    throw new Error(createData.error || '프로젝트 생성 실패');
-                }
-
-                targetProjectId = createData.projectId;
-                targetProjectName = createData.projectName;
-            } else {
-                const selectedProject = projects.find(p => p.id === selectedProjectId);
-                if (selectedProject) {
-                    targetProjectName = selectedProject.name;
-                }
-            }
-
-            // 2. Upload File
+            // Upload File
             const formData = new FormData();
-            formData.append('projectFolderId', targetProjectId);
+            formData.append('projectFolderId', selectedProjectId);
             formData.append('projectName', targetProjectName);
 
             if (mode === 'file' && file) {
@@ -148,10 +176,9 @@ export default function FileUpload() {
 
             if (data.success) {
                 alert(`성공! ${data.chapterCount}개의 챕터가 처리되었습니다.`);
-                // Refresh projects list if new project was created
-                if (projectMode === 'new') {
-                    window.location.reload(); // Simple reload to refresh state
-                }
+                // Optional: Reset file/url state
+                setFile(null);
+                setUrl('');
             } else {
                 alert(`오류: ${data.error}`);
             }
@@ -163,7 +190,7 @@ export default function FileUpload() {
     };
 
     return (
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 md:p-8">
             {/* Project Selection Section */}
             <div className="mb-8">
                 <h3 className="text-sm font-bold text-line-dark mb-4 uppercase tracking-wider">프로젝트 선택</h3>
@@ -172,7 +199,7 @@ export default function FileUpload() {
                 <div className="flex gap-2 mb-4 bg-line-gray p-1 rounded-xl">
                     <button
                         onClick={() => setProjectMode('new')}
-                        className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${projectMode === 'new'
+                        className={`flex-1 py-2.5 px-2 md:px-4 rounded-lg text-xs md:text-sm font-bold transition-all ${projectMode === 'new'
                             ? 'bg-white text-line-green shadow-sm'
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
@@ -181,7 +208,7 @@ export default function FileUpload() {
                     </button>
                     <button
                         onClick={() => setProjectMode('existing')}
-                        className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${projectMode === 'existing'
+                        className={`flex-1 py-2.5 px-2 md:px-4 rounded-lg text-xs md:text-sm font-bold transition-all ${projectMode === 'existing'
                             ? 'bg-white text-line-green shadow-sm'
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
@@ -196,13 +223,26 @@ export default function FileUpload() {
                         <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
                             새 프로젝트 이름
                         </label>
-                        <input
-                            type="text"
-                            value={projectName}
-                            onChange={(e) => setProjectName(e.target.value)}
-                            placeholder="예: 마케팅 브로슈어 Q4"
-                            className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
-                        />
+                        <div className="flex gap-2 flex-col md:flex-row">
+                            <input
+                                type="text"
+                                value={projectName}
+                                onChange={(e) => setProjectName(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="예: 마케팅 브로슈어 Q4"
+                                className="flex-1 px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
+                            />
+                            <button
+                                onClick={handleCreateProject}
+                                disabled={isCreatingProject || !projectName.trim()}
+                                className="px-6 py-3.5 bg-line-dark text-white rounded-xl font-bold text-sm hover:bg-black disabled:opacity-50 transition-all whitespace-nowrap"
+                            >
+                                {isCreatingProject ? '생성 중...' : '생성'}
+                            </button>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-2 ml-1">
+                            * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
+                        </p>
                     </div>
                 ) : (
                     <div>
@@ -240,7 +280,7 @@ export default function FileUpload() {
             <div className="flex gap-3 mb-6">
                 <button
                     onClick={() => setMode('file')}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all border ${mode === 'file'
+                    className={`flex-1 py-3 px-2 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all border ${mode === 'file'
                         ? 'bg-line-green text-white border-line-green shadow-md shadow-green-100'
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
@@ -249,7 +289,7 @@ export default function FileUpload() {
                 </button>
                 <button
                     onClick={() => setMode('url')}
-                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all border ${mode === 'url'
+                    className={`flex-1 py-3 px-2 md:px-4 rounded-xl font-bold text-xs md:text-sm transition-all border ${mode === 'url'
                         ? 'bg-line-green text-white border-line-green shadow-md shadow-green-100'
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
@@ -264,7 +304,7 @@ export default function FileUpload() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${isDragging
+                    className={`border-2 border-dashed rounded-2xl p-6 md:p-10 text-center transition-all ${isDragging
                         ? 'border-line-green bg-green-50'
                         : 'border-gray-200 hover:border-line-green hover:bg-gray-50'
                         }`}
@@ -275,7 +315,7 @@ export default function FileUpload() {
                                 📄
                             </div>
                             <div>
-                                <p className="font-bold text-line-dark">{file.name}</p>
+                                <p className="font-bold text-line-dark break-all">{file.name}</p>
                                 <p className="text-xs text-gray-400 mt-1">
                                     {(file.size / 1024).toFixed(1)} KB
                                 </p>
@@ -289,13 +329,13 @@ export default function FileUpload() {
                         </div>
                     ) : (
                         <>
-                            <div className="w-16 h-16 mx-auto bg-line-gray rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
+                            <div className="w-12 h-12 md:w-16 md:h-16 mx-auto bg-line-gray rounded-full flex items-center justify-center text-2xl md:text-3xl mb-4 text-gray-400">
                                 📁
                             </div>
-                            <p className="text-base font-bold text-line-dark mb-2">
+                            <p className="text-sm md:text-base font-bold text-line-dark mb-2">
                                 파일을 여기에 드래그하세요
                             </p>
-                            <p className="text-sm text-gray-400 mb-6">
+                            <p className="text-xs md:text-sm text-gray-400 mb-6">
                                 또는
                             </p>
                             <label className="inline-block">
@@ -305,7 +345,7 @@ export default function FileUpload() {
                                     accept=".pdf,.docx,.txt"
                                     className="hidden"
                                 />
-                                <span className="px-8 py-3 bg-line-dark text-white rounded-full font-bold text-sm cursor-pointer hover:bg-black transition-all shadow-lg shadow-gray-200 inline-block">
+                                <span className="px-6 md:px-8 py-2.5 md:py-3 bg-line-dark text-white rounded-full font-bold text-xs md:text-sm cursor-pointer hover:bg-black transition-all shadow-lg shadow-gray-200 inline-block">
                                     파일 선택
                                 </span>
                             </label>
@@ -335,7 +375,7 @@ export default function FileUpload() {
             {/* Upload Button */}
             <button
                 onClick={handleUpload}
-                disabled={uploading || (!file && !url) || (projectMode === 'new' ? !projectName.trim() : !selectedProjectId)}
+                disabled={uploading || (!file && !url) || !selectedProjectId}
                 className="w-full mt-8 py-4 bg-line-green text-white rounded-xl font-bold text-lg hover:bg-[#05b34c] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-100 active:scale-[0.99]"
             >
                 {uploading ? (
