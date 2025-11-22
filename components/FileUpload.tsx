@@ -145,27 +145,27 @@ export default function FileUpload() {
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
             {/* Project Selection Section */}
             <div className="mb-8">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Project Selection</h3>
+                <h3 className="text-sm font-bold text-line-dark mb-4 uppercase tracking-wider">Project Selection</h3>
 
                 {/* Toggle */}
-                <div className="flex gap-2 mb-4 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                <div className="flex gap-2 mb-4 bg-line-gray p-1 rounded-xl">
                     <button
                         onClick={() => setProjectMode('new')}
-                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${projectMode === 'new'
-                                ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                        className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${projectMode === 'new'
+                            ? 'bg-white text-line-green shadow-sm'
+                            : 'text-gray-400 hover:text-gray-600'
                             }`}
                     >
                         ✨ New Project
                     </button>
                     <button
                         onClick={() => setProjectMode('existing')}
-                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${projectMode === 'existing'
-                                ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                        className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${projectMode === 'existing'
+                            ? 'bg-white text-line-green shadow-sm'
+                            : 'text-gray-400 hover:text-gray-600'
                             }`}
                     >
                         📂 Existing Project
@@ -175,58 +175,65 @@ export default function FileUpload() {
                 {/* Inputs */}
                 {projectMode === 'new' ? (
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            New Project Name
+                        <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
+                            NEW PROJECT NAME
                         </label>
                         <input
                             type="text"
                             value={projectName}
                             onChange={(e) => setProjectName(e.target.value)}
                             placeholder="e.g., Marketing Brochure Q4"
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
                         />
                     </div>
                 ) : (
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                            Select Existing Project
+                        <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
+                            SELECT EXISTING PROJECT
                         </label>
-                        <select
-                            value={selectedProjectId}
-                            onChange={(e) => setSelectedProjectId(e.target.value)}
-                            disabled={isLoadingProjects}
-                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                            <option value="">Select a project...</option>
-                            {projects.map((project) => (
-                                <option key={project.id} value={project.id}>
-                                    {project.name}
-                                </option>
-                            ))}
-                        </select>
-                        {isLoadingProjects && <p className="text-xs text-slate-500 mt-1">Loading projects...</p>}
+                        <div className="relative">
+                            <select
+                                value={selectedProjectId}
+                                onChange={(e) => setSelectedProjectId(e.target.value)}
+                                disabled={isLoadingProjects}
+                                className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark focus:outline-none focus:ring-2 focus:ring-line-green appearance-none disabled:opacity-50 transition-all"
+                            >
+                                <option value="">Select a project...</option>
+                                {projects.map((project) => (
+                                    <option key={project.id} value={project.id}>
+                                        {project.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                        {isLoadingProjects && <p className="text-xs text-line-green mt-2 font-medium">Loading projects...</p>}
                     </div>
                 )}
             </div>
 
-            <hr className="border-slate-200 dark:border-slate-700 my-8" />
+            <hr className="border-gray-100 my-8" />
 
             {/* Mode Selector (File/URL) */}
-            <div className="flex gap-2 mb-6">
+            <div className="flex gap-3 mb-6">
                 <button
                     onClick={() => setMode('file')}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${mode === 'file'
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all border ${mode === 'file'
+                        ? 'bg-line-green text-white border-line-green shadow-md shadow-green-100'
+                        : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
                 >
                     📄 Upload File
                 </button>
                 <button
                     onClick={() => setMode('url')}
-                    className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${mode === 'url'
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm transition-all border ${mode === 'url'
+                        ? 'bg-line-green text-white border-line-green shadow-md shadow-green-100'
+                        : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
                 >
                     🔗 Paste URL
@@ -239,34 +246,38 @@ export default function FileUpload() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-xl p-12 text-center transition-all ${isDragging
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'
+                    className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all ${isDragging
+                        ? 'border-line-green bg-green-50'
+                        : 'border-gray-200 hover:border-line-green hover:bg-gray-50'
                         }`}
                 >
                     {file ? (
                         <div className="space-y-4">
-                            <div className="text-6xl">📄</div>
+                            <div className="w-16 h-16 mx-auto bg-line-gray rounded-full flex items-center justify-center text-3xl">
+                                📄
+                            </div>
                             <div>
-                                <p className="font-semibold text-slate-900 dark:text-white">{file.name}</p>
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                <p className="font-bold text-line-dark">{file.name}</p>
+                                <p className="text-xs text-gray-400 mt-1">
                                     {(file.size / 1024).toFixed(1)} KB
                                 </p>
                             </div>
                             <button
                                 onClick={() => setFile(null)}
-                                className="text-sm text-red-600 dark:text-red-400 hover:underline"
+                                className="text-xs font-bold text-red-500 hover:text-red-600 py-1 px-3 rounded-full hover:bg-red-50 transition-colors"
                             >
-                                Remove
+                                Remove File
                             </button>
                         </div>
                     ) : (
                         <>
-                            <div className="text-6xl mb-4">📁</div>
-                            <p className="text-lg font-medium text-slate-900 dark:text-white mb-2">
+                            <div className="w-16 h-16 mx-auto bg-line-gray rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
+                                📁
+                            </div>
+                            <p className="text-base font-bold text-line-dark mb-2">
                                 Drag & drop your file here
                             </p>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                            <p className="text-sm text-gray-400 mb-6">
                                 or
                             </p>
                             <label className="inline-block">
@@ -276,11 +287,11 @@ export default function FileUpload() {
                                     accept=".pdf,.docx,.txt"
                                     className="hidden"
                                 />
-                                <span className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium cursor-pointer hover:bg-blue-700 transition-colors inline-block">
+                                <span className="px-8 py-3 bg-line-dark text-white rounded-full font-bold text-sm cursor-pointer hover:bg-black transition-all shadow-lg shadow-gray-200 inline-block">
                                     Choose File
                                 </span>
                             </label>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-4">
+                            <p className="text-[10px] text-gray-400 mt-6 uppercase tracking-wide">
                                 Supported: PDF, DOCX, TXT (max 10MB)
                             </p>
                         </>
@@ -295,11 +306,11 @@ export default function FileUpload() {
                         type="url"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
-                        placeholder="https://docs.google.com/document/d/YOUR_DOC_ID/edit"
-                        className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="https://docs.google.com/document/d/..."
+                        className="w-full px-4 py-4 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
                     />
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Enter a Google Drive DOC/DOCX URL (document must be publicly accessible or shared)
+                    <p className="text-xs text-gray-400 px-1">
+                        Enter a Google Drive DOC/DOCX URL (must be publicly accessible)
                     </p>
                 </div>
             )}
@@ -307,7 +318,7 @@ export default function FileUpload() {
             <button
                 onClick={handleUpload}
                 disabled={uploading || (!file && !url) || (projectMode === 'new' ? !projectName.trim() : !selectedProjectId)}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                className="w-full mt-8 py-4 bg-line-green text-white rounded-xl font-bold text-lg hover:bg-[#05b34c] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-green-100 active:scale-[0.99]"
             >
                 {uploading ? (
                     <span className="flex items-center justify-center gap-2">
