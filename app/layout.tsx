@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
     title: "Translation Helper",
-    description: "AI-powered translation workflow manager",
+    description: "AI Translation Helper",
 };
 
 export default function RootLayout({
@@ -15,8 +15,8 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
-            <body className={inter.className}>{children}</body>
+        <html lang="ko">
+            <body className={inter.className} style={{ fontFamily: '-apple-system, BlinkMacMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif' }}>{children}</body>
         </html>
     );
 }

@@ -74,12 +74,12 @@ export default function FileUpload() {
         const isValidType = validTypes.includes(file.type) || validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
 
         if (!isValidType) {
-            alert('Please upload a PDF, DOCX, or TXT file');
+            alert('PDF, DOCX, TXT 파일만 업로드 가능합니다.');
             return;
         }
 
         if (file.size > 10 * 1024 * 1024) { // 10MB limit
-            alert('File size must be less than 10MB');
+            alert('파일 크기는 10MB 이하여야 합니다.');
             return;
         }
 
@@ -88,32 +88,50 @@ export default function FileUpload() {
 
     const handleUpload = async () => {
         if (projectMode === 'new' && !projectName.trim()) {
-            alert('Please enter a Project Name');
+            alert('프로젝트 이름을 입력해주세요.');
             return;
         }
         if (projectMode === 'existing' && !selectedProjectId) {
-            alert('Please select a Project');
+            alert('프로젝트를 선택해주세요.');
             return;
         }
 
         if (!file && !url) {
-            alert('Please select a file or enter a URL');
+            alert('파일을 선택하거나 URL을 입력해주세요.');
             return;
         }
 
         setUploading(true);
         try {
-            const formData = new FormData();
+            let targetProjectId = selectedProjectId;
+            let targetProjectName = '';
 
+            // 1. Create Project if needed
             if (projectMode === 'new') {
-                formData.append('projectName', projectName.trim());
+                const createRes = await fetch('/api/projects/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ projectName: projectName.trim() }),
+                });
+                const createData = await createRes.json();
+
+                if (!createData.success) {
+                    throw new Error(createData.error || '프로젝트 생성 실패');
+                }
+
+                targetProjectId = createData.projectId;
+                targetProjectName = createData.projectName;
             } else {
-                formData.append('projectFolderId', selectedProjectId);
                 const selectedProject = projects.find(p => p.id === selectedProjectId);
                 if (selectedProject) {
-                    formData.append('projectName', selectedProject.name);
+                    targetProjectName = selectedProject.name;
                 }
             }
+
+            // 2. Upload File
+            const formData = new FormData();
+            formData.append('projectFolderId', targetProjectId);
+            formData.append('projectName', targetProjectName);
 
             if (mode === 'file' && file) {
                 formData.append('file', file);
@@ -129,16 +147,16 @@ export default function FileUpload() {
             const data = await res.json();
 
             if (data.success) {
-                alert(`Success! Processed ${data.chapterCount} chapters`);
+                alert(`성공! ${data.chapterCount}개의 챕터가 처리되었습니다.`);
                 // Refresh projects list if new project was created
                 if (projectMode === 'new') {
-                    // Ideally re-fetch, but for now just alert
+                    window.location.reload(); // Simple reload to refresh state
                 }
             } else {
-                alert(`Error: ${data.error}`);
+                alert(`오류: ${data.error}`);
             }
-        } catch (error) {
-            alert('Upload failed: ' + error);
+        } catch (error: any) {
+            alert('작업 실패: ' + error.message);
         } finally {
             setUploading(false);
         }
@@ -148,7 +166,7 @@ export default function FileUpload() {
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8">
             {/* Project Selection Section */}
             <div className="mb-8">
-                <h3 className="text-sm font-bold text-line-dark mb-4 uppercase tracking-wider">Project Selection</h3>
+                <h3 className="text-sm font-bold text-line-dark mb-4 uppercase tracking-wider">프로젝트 선택</h3>
 
                 {/* Toggle */}
                 <div className="flex gap-2 mb-4 bg-line-gray p-1 rounded-xl">
@@ -159,7 +177,7 @@ export default function FileUpload() {
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
                     >
-                        ✨ New Project
+                        ✨ 새 프로젝트
                     </button>
                     <button
                         onClick={() => setProjectMode('existing')}
@@ -168,7 +186,7 @@ export default function FileUpload() {
                             : 'text-gray-400 hover:text-gray-600'
                             }`}
                     >
-                        📂 Existing Project
+                        📂 기존 프로젝트
                     </button>
                 </div>
 
@@ -176,20 +194,20 @@ export default function FileUpload() {
                 {projectMode === 'new' ? (
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
-                            NEW PROJECT NAME
+                            새 프로젝트 이름
                         </label>
                         <input
                             type="text"
                             value={projectName}
                             onChange={(e) => setProjectName(e.target.value)}
-                            placeholder="e.g., Marketing Brochure Q4"
+                            placeholder="예: 마케팅 브로슈어 Q4"
                             className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
                         />
                     </div>
                 ) : (
                     <div>
                         <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
-                            SELECT EXISTING PROJECT
+                            기존 프로젝트 선택
                         </label>
                         <div className="relative">
                             <select
@@ -198,7 +216,7 @@ export default function FileUpload() {
                                 disabled={isLoadingProjects}
                                 className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark focus:outline-none focus:ring-2 focus:ring-line-green appearance-none disabled:opacity-50 transition-all"
                             >
-                                <option value="">Select a project...</option>
+                                <option value="">프로젝트를 선택하세요...</option>
                                 {projects.map((project) => (
                                     <option key={project.id} value={project.id}>
                                         {project.name}
@@ -211,7 +229,7 @@ export default function FileUpload() {
                                 </svg>
                             </div>
                         </div>
-                        {isLoadingProjects && <p className="text-xs text-line-green mt-2 font-medium">Loading projects...</p>}
+                        {isLoadingProjects && <p className="text-xs text-line-green mt-2 font-medium">프로젝트 목록 로딩 중...</p>}
                     </div>
                 )}
             </div>
@@ -227,7 +245,7 @@ export default function FileUpload() {
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
                 >
-                    📄 Upload File
+                    📄 파일 업로드
                 </button>
                 <button
                     onClick={() => setMode('url')}
@@ -236,7 +254,7 @@ export default function FileUpload() {
                         : 'bg-white text-gray-400 border-gray-200 hover:border-gray-300'
                         }`}
                 >
-                    🔗 Paste URL
+                    🔗 URL 입력
                 </button>
             </div>
 
@@ -266,7 +284,7 @@ export default function FileUpload() {
                                 onClick={() => setFile(null)}
                                 className="text-xs font-bold text-red-500 hover:text-red-600 py-1 px-3 rounded-full hover:bg-red-50 transition-colors"
                             >
-                                Remove File
+                                파일 삭제
                             </button>
                         </div>
                     ) : (
@@ -275,10 +293,10 @@ export default function FileUpload() {
                                 📁
                             </div>
                             <p className="text-base font-bold text-line-dark mb-2">
-                                Drag & drop your file here
+                                파일을 여기에 드래그하세요
                             </p>
                             <p className="text-sm text-gray-400 mb-6">
-                                or
+                                또는
                             </p>
                             <label className="inline-block">
                                 <input
@@ -288,11 +306,11 @@ export default function FileUpload() {
                                     className="hidden"
                                 />
                                 <span className="px-8 py-3 bg-line-dark text-white rounded-full font-bold text-sm cursor-pointer hover:bg-black transition-all shadow-lg shadow-gray-200 inline-block">
-                                    Choose File
+                                    파일 선택
                                 </span>
                             </label>
                             <p className="text-[10px] text-gray-400 mt-6 uppercase tracking-wide">
-                                Supported: PDF, DOCX, TXT (max 10MB)
+                                지원 형식: PDF, DOCX, TXT (최대 10MB)
                             </p>
                         </>
                     )}
@@ -310,7 +328,7 @@ export default function FileUpload() {
                         className="w-full px-4 py-4 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
                     />
                     <p className="text-xs text-gray-400 px-1">
-                        Enter a Google Drive DOC/DOCX URL (must be publicly accessible)
+                        Google Drive 문서 URL을 입력하세요 (공개 또는 공유된 문서)
                     </p>
                 </div>
             )}
@@ -326,10 +344,10 @@ export default function FileUpload() {
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                         </svg>
-                        Processing...
+                        처리 중...
                     </span>
                 ) : (
-                    '🚀 Start Translation'
+                    '🚀 번역 시작'
                 )}
             </button>
         </div>
