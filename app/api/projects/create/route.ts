@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
+        console.log('[v1.4] Project creation request received');
         const { projectName } = await request.json();
 
         if (!projectName) {

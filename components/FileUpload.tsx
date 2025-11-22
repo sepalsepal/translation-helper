@@ -259,7 +259,7 @@ export default function FileUpload() {
                             <p className="text-[10px] text-gray-400">
                                 * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
                             </p>
-                            <span className="text-[10px] text-gray-300">v1.2</span>
+                            <span className="text-[10px] text-gray-300">v1.4 (Stable)</span>
                         </div>
                     </div>
                 ) : (
