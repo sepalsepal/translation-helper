@@ -1,6 +1,11 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+
+interface Project {
+    id: string;
+    name: string;
+}
 
 export default function FileUpload() {
     const [isDragging, setIsDragging] = useState(false);
@@ -8,7 +13,32 @@ export default function FileUpload() {
     const [url, setUrl] = useState('');
     const [uploading, setUploading] = useState(false);
     const [mode, setMode] = useState<'file' | 'url'>('file');
+
+    // Project Selection State
+    const [projectMode, setProjectMode] = useState<'new' | 'existing'>('new');
     const [projectName, setProjectName] = useState('');
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState('');
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+
+    // Fetch projects on mount
+    useEffect(() => {
+        const fetchProjects = async () => {
+            setIsLoadingProjects(true);
+            try {
+                const res = await fetch('/api/projects');
+                const data = await res.json();
+                if (data.projects) {
+                    setProjects(data.projects);
+                }
+            } catch (error) {
+                console.error('Failed to fetch projects', error);
+            } finally {
+                setIsLoadingProjects(false);
+            }
+        };
+        fetchProjects();
+    }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -57,10 +87,15 @@ export default function FileUpload() {
     };
 
     const handleUpload = async () => {
-        if (!projectName.trim()) {
+        if (projectMode === 'new' && !projectName.trim()) {
             alert('Please enter a Project Name');
             return;
         }
+        if (projectMode === 'existing' && !selectedProjectId) {
+            alert('Please select a Project');
+            return;
+        }
+
         if (!file && !url) {
             alert('Please select a file or enter a URL');
             return;
@@ -69,7 +104,16 @@ export default function FileUpload() {
         setUploading(true);
         try {
             const formData = new FormData();
-            formData.append('projectName', projectName.trim());
+
+            if (projectMode === 'new') {
+                formData.append('projectName', projectName.trim());
+            } else {
+                formData.append('projectFolderId', selectedProjectId);
+                const selectedProject = projects.find(p => p.id === selectedProjectId);
+                if (selectedProject) {
+                    formData.append('projectName', selectedProject.name);
+                }
+            }
 
             if (mode === 'file' && file) {
                 formData.append('file', file);
@@ -86,6 +130,10 @@ export default function FileUpload() {
 
             if (data.success) {
                 alert(`Success! Processed ${data.chapterCount} chapters`);
+                // Refresh projects list if new project was created
+                if (projectMode === 'new') {
+                    // Ideally re-fetch, but for now just alert
+                }
             } else {
                 alert(`Error: ${data.error}`);
             }
@@ -98,21 +146,72 @@ export default function FileUpload() {
 
     return (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
-            {/* Project Name Input */}
-            <div className="mb-6">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                    Project Name
-                </label>
-                <input
-                    type="text"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                    placeholder="e.g., Marketing Brochure Q4"
-                    className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+            {/* Project Selection Section */}
+            <div className="mb-8">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Project Selection</h3>
+
+                {/* Toggle */}
+                <div className="flex gap-2 mb-4 bg-slate-100 dark:bg-slate-700 p-1 rounded-lg">
+                    <button
+                        onClick={() => setProjectMode('new')}
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${projectMode === 'new'
+                                ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                            }`}
+                    >
+                        ✨ New Project
+                    </button>
+                    <button
+                        onClick={() => setProjectMode('existing')}
+                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${projectMode === 'existing'
+                                ? 'bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                            }`}
+                    >
+                        📂 Existing Project
+                    </button>
+                </div>
+
+                {/* Inputs */}
+                {projectMode === 'new' ? (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            New Project Name
+                        </label>
+                        <input
+                            type="text"
+                            value={projectName}
+                            onChange={(e) => setProjectName(e.target.value)}
+                            placeholder="e.g., Marketing Brochure Q4"
+                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                ) : (
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                            Select Existing Project
+                        </label>
+                        <select
+                            value={selectedProjectId}
+                            onChange={(e) => setSelectedProjectId(e.target.value)}
+                            disabled={isLoadingProjects}
+                            className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        >
+                            <option value="">Select a project...</option>
+                            {projects.map((project) => (
+                                <option key={project.id} value={project.id}>
+                                    {project.name}
+                                </option>
+                            ))}
+                        </select>
+                        {isLoadingProjects && <p className="text-xs text-slate-500 mt-1">Loading projects...</p>}
+                    </div>
+                )}
             </div>
 
-            {/* Mode Selector */}
+            <hr className="border-slate-200 dark:border-slate-700 my-8" />
+
+            {/* Mode Selector (File/URL) */}
             <div className="flex gap-2 mb-6">
                 <button
                     onClick={() => setMode('file')}
@@ -207,7 +306,7 @@ export default function FileUpload() {
             {/* Upload Button */}
             <button
                 onClick={handleUpload}
-                disabled={uploading || (!file && !url) || !projectName.trim()}
+                disabled={uploading || (!file && !url) || (projectMode === 'new' ? !projectName.trim() : !selectedProjectId)}
                 className="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
             >
                 {uploading ? (

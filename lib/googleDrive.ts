@@ -141,3 +141,19 @@ export async function createSpreadsheet(title: string, parentId: string) {
 
     return spreadsheetId;
 }
+
+/**
+ * List all subfolders within a parent folder
+ */
+export async function listFolders(parentId: string) {
+    const drive = await getDriveClient();
+    const q = `mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+
+    const res = await drive.files.list({
+        q,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+    });
+
+    return res.data.files || [];
+}

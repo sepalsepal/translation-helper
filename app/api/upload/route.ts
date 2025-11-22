@@ -12,10 +12,11 @@ export async function POST(request: Request) {
         const file = formData.get('file') as File | null;
         const url = formData.get('url') as string | null;
         const projectName = formData.get('projectName') as string | null;
+        let projectFolderId = formData.get('projectFolderId') as string | null;
 
-        if ((!file && !url) || !projectName) {
+        if ((!file && !url) || (!projectName && !projectFolderId)) {
             return NextResponse.json(
-                { success: false, error: 'Missing file, URL, or Project Name' },
+                { success: false, error: 'Missing file, URL, or Project details' },
                 { status: 400 }
             );
         }
@@ -32,9 +33,17 @@ export async function POST(request: Request) {
             rootFolderId = await createFolder('TransAuto');
         }
 
-        // Create Project Folder
-        console.log(`Creating project folder: ${projectName}`);
-        const projectFolderId = await createFolder(projectName, rootFolderId);
+        // Get or Create Project Folder
+        if (!projectFolderId && projectName) {
+            console.log(`Creating project folder: ${projectName}`);
+            projectFolderId = await createFolder(projectName, rootFolderId);
+        } else if (projectFolderId) {
+            console.log(`Using existing project folder ID: ${projectFolderId}`);
+            // ... existing logic
+            if (!projectName) {
+                // ...
+            }
+        }
 
         // Upload Source File
         if (file) {
