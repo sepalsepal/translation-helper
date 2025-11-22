@@ -158,3 +158,23 @@ export async function listFolders(parentId: string) {
 
     return res.data.files || [];
 }
+
+/**
+ * Share a folder/file with a user or make it public
+ */
+export async function shareFolder(fileId: string, email?: string) {
+    const drive = await getDriveClient();
+    try {
+        await drive.permissions.create({
+            fileId,
+            requestBody: {
+                role: 'writer', // Allow editing
+                type: email ? 'user' : 'anyone',
+                emailAddress: email,
+            },
+        });
+    } catch (error) {
+        console.error('Failed to share folder:', error);
+        // Don't throw, just log. We want the creation to succeed even if sharing fails.
+    }
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { findFolder, createFolder, createSpreadsheet } from '@/lib/googleDrive';
+import { createFolder, createSpreadsheet, findFolder, shareFolder } from '@/lib/googleDrive';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,6 +36,9 @@ export async function POST(request: Request) {
         if (!projectFolderId) {
             throw new Error('Failed to create project folder');
         }
+
+        // Make folder accessible to user (public link for now as we don't have user email)
+        await shareFolder(projectFolderId);
 
         // 3. Create spreadsheet inside project folder
         const spreadsheetName = `${projectName}_Trans`;
