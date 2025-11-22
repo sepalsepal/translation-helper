@@ -87,35 +87,41 @@ export default function FileUpload() {
     };
 
     const [isCreatingProject, setIsCreatingProject] = useState(false);
+    const [createStatus, setCreateStatus] = useState<{ type: 'success' | 'error' | 'info' | null, message: string, link?: string }>({ type: null, message: '' });
 
     // ... (existing useEffect)
 
     const handleCreateProject = async () => {
         if (!projectName.trim()) {
-            alert('프로젝트 이름을 입력해주세요.');
+            setCreateStatus({ type: 'error', message: '프로젝트 이름을 입력해주세요.' });
             return;
         }
 
         setIsCreatingProject(true);
+        setCreateStatus({ type: 'info', message: '프로젝트 생성 중...' });
+
         try {
             const createRes = await fetch('/api/projects/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ projectName: projectName.trim() }),
             });
+
+            if (!createRes.ok) {
+                throw new Error(`HTTP error! status: ${createRes.status}`);
+            }
+
             const createData = await createRes.json();
 
             if (!createData.success) {
                 throw new Error(createData.error || '프로젝트 생성 실패');
             }
 
-            let successMsg = `프로젝트 "${createData.projectName}"가 생성되었습니다!`;
-            if (createData.webViewLink) {
-                successMsg += `\n\n구글 드라이브 링크: ${createData.webViewLink}`;
-                // Open link in new tab for convenience
-                window.open(createData.webViewLink, '_blank');
-            }
-            alert(successMsg);
+            setCreateStatus({
+                type: 'success',
+                message: `프로젝트 "${createData.projectName}"가 생성되었습니다!`,
+                link: createData.webViewLink
+            });
 
             // Refresh projects and select the new one
             const res = await fetch('/api/projects');
@@ -127,7 +133,8 @@ export default function FileUpload() {
                 setProjectName(''); // Clear input
             }
         } catch (error: any) {
-            alert('프로젝트 생성 실패: ' + error.message);
+            console.error('Project creation error:', error);
+            setCreateStatus({ type: 'error', message: '프로젝트 생성 실패: ' + error.message });
         } finally {
             setIsCreatingProject(false);
         }
@@ -135,6 +142,7 @@ export default function FileUpload() {
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
+            e.preventDefault(); // Critical: Prevent form submission or page reload
             handleCreateProject();
         }
     };
