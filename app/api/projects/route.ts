@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
     try {
         const rootFolder = await findFolder('TransAuto');
-        if (!rootFolder) {
+        if (!rootFolder || !rootFolder.id) {
             return NextResponse.json({ projects: [] });
         }
 
