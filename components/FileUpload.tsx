@@ -86,6 +86,16 @@ export default function FileUpload() {
         setFile(file);
     };
 
+    const [userEmail, setUserEmail] = useState('');
+
+    // Load email from localStorage on mount
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('trans_user_email');
+        if (savedEmail) {
+            setUserEmail(savedEmail);
+        }
+    }, []);
+
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [createStatus, setCreateStatus] = useState<{ type: 'success' | 'error' | 'info' | null, message: string, link?: string }>({ type: null, message: '' });
 
@@ -97,6 +107,11 @@ export default function FileUpload() {
             return;
         }
 
+        // Save email to localStorage if provided
+        if (userEmail.trim()) {
+            localStorage.setItem('trans_user_email', userEmail.trim());
+        }
+
         setIsCreatingProject(true);
         setCreateStatus({ type: 'info', message: '프로젝트 생성 중...' });
 
@@ -104,7 +119,10 @@ export default function FileUpload() {
             const createRes = await fetch('/api/projects/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ projectName: projectName.trim() }),
+                body: JSON.stringify({
+                    projectName: projectName.trim(),
+                    userEmail: userEmail.trim() // Send email to backend
+                }),
             });
 
             if (!createRes.ok) {
@@ -234,32 +252,63 @@ export default function FileUpload() {
                 {/* Inputs */}
                 {projectMode === 'new' ? (
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
-                            새 프로젝트 이름
-                        </label>
-                        <div className="flex gap-2 flex-col md:flex-row">
-                            <input
-                                type="text"
-                                value={projectName}
-                                onChange={(e) => setProjectName(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="예: 마케팅 브로슈어 Q4"
-                                className="flex-1 px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
-                            />
-                            <button
-                                type="button"
-                                onClick={handleCreateProject}
-                                disabled={isCreatingProject || !projectName.trim()}
-                                className="px-6 py-3.5 bg-zinc-800 text-white rounded-xl font-bold text-sm hover:bg-black disabled:opacity-50 transition-all whitespace-nowrap shadow-sm"
-                            >
-                                {isCreatingProject ? '생성 중...' : '생성'}
-                            </button>
+                        <div className="space-y-3 mb-2">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
+                                    새 프로젝트 이름
+                                </label>
+                                <input
+                                    type="text"
+                                    value={projectName}
+                                    onChange={(e) => setProjectName(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    placeholder="예: 마케팅 브로슈어 Q4"
+                                    className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-2 ml-1">
+                                    구글 이메일 (공유용) <span className="text-line-green text-[10px] font-normal">* 선택사항</span>
+                                </label>
+                                <input
+                                    type="email"
+                                    value={userEmail}
+                                    onChange={(e) => setUserEmail(e.target.value)}
+                                    placeholder="example@gmail.com (폴더가 이 주소로 공유됩니다)"
+                                    className="w-full px-4 py-3.5 border-0 bg-line-gray rounded-xl text-line-dark placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-line-green transition-all"
+                                />
+                            </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handleCreateProject(); }}
+                            disabled={isCreatingProject || !projectName.trim()}
+                            className="w-full py-3.5 bg-zinc-800 text-white rounded-xl font-bold text-sm hover:bg-black disabled:opacity-50 transition-all whitespace-nowrap shadow-sm mt-2"
+                        >
+                            {isCreatingProject ? '생성 중...' : '프로젝트 생성'}
+                        </button>
+
+                        {/* Status Message Area */}
+                        {createStatus.message && (
+                            <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${createStatus.type === 'error' ? 'bg-red-50 text-red-500' :
+                                    createStatus.type === 'success' ? 'bg-green-50 text-line-green' : 'bg-gray-50 text-gray-500'
+                                }`}>
+                                {createStatus.message}
+                                {createStatus.link && (
+                                    <a href={createStatus.link} target="_blank" rel="noopener noreferrer" className="block mt-1 underline">
+                                        📂 구글 드라이브에서 확인하기
+                                    </a>
+                                )}
+                            </div>
+                        )}
+
                         <div className="flex justify-between items-center mt-2 ml-1">
                             <p className="text-[10px] text-gray-400">
-                                * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
+                                * 이메일을 입력하면 '공유 문서함'에서 폴더를 찾을 수 있습니다.
                             </p>
-                            <span className="text-[10px] text-gray-300">v1.4 (Stable)</span>
+                            <span className="text-[10px] text-gray-300">v1.5 (Email)</span>
                         </div>
                     </div>
                 ) : (
