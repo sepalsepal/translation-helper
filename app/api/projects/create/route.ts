@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
-        console.log('[v1.6] Project creation request received');
+        console.log('[v1.8] Project creation request received');
         const { projectName } = await request.json();
 
         if (!projectName) {
@@ -47,16 +47,22 @@ export async function POST(request: Request) {
         await shareFolder(projectFolderId);
 
         // 3. Create spreadsheet inside project folder
-        const spreadsheetName = `${projectName}_Trans`;
-        console.log('[v1.7] Creating spreadsheet:', spreadsheetName);
+        // User requested same name as folder
+        const spreadsheetName = projectName;
+        console.log('[v1.8] Creating spreadsheet:', spreadsheetName);
         let spreadsheetId: string | undefined;
         try {
             spreadsheetId = await createSpreadsheet(spreadsheetName, projectFolderId);
-            console.log('[v1.7] Spreadsheet created');
+            console.log('[v1.8] Spreadsheet created:', spreadsheetId);
         } catch (sheetError) {
-            console.error('[v1.7] Failed to create spreadsheet:', sheetError);
-            // We don't block project creation if sheet fails, but we should probably let the user know?
-            // For now, let's just log it.
+            console.error('[v1.8] Failed to create spreadsheet:', sheetError);
+            // If spreadsheet creation fails, we should probably let the user know, 
+            // but for now we'll keep the project created.
+            // Ideally, we might want to retry or fail the whole process if this is critical.
+            // Given the user's request "must be created", let's treat it as important but maybe not blocking the folder existence.
+            // However, if it fails, the user will complain. 
+            // Let's throw for now to see if it's a permission issue.
+            throw new Error('Failed to create spreadsheet: ' + (sheetError instanceof Error ? sheetError.message : 'Unknown error'));
         }
 
         return NextResponse.json({
