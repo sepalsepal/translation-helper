@@ -165,13 +165,18 @@ export async function listFolders(parentId: string) {
 export async function shareFolder(fileId: string, email?: string) {
     const drive = await getDriveClient();
     try {
+        const requestBody: any = {
+            role: 'writer', // Allow editing
+            type: email ? 'user' : 'anyone',
+        };
+
+        if (email) {
+            requestBody.emailAddress = email;
+        }
+
         await drive.permissions.create({
             fileId,
-            requestBody: {
-                role: 'writer', // Allow editing
-                type: email ? 'user' : 'anyone',
-                emailAddress: email,
-            },
+            requestBody,
         });
     } catch (error) {
         console.error('Failed to share folder:', error);

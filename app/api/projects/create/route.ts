@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
     try {
-        console.log('[v1.5] Project creation request received');
-        const { projectName, userEmail } = await request.json();
+        console.log('[v1.6] Project creation request received');
+        const { projectName } = await request.json();
 
         if (!projectName) {
             return NextResponse.json(
@@ -37,10 +37,8 @@ export async function POST(request: Request) {
             throw new Error('Failed to create project folder');
         }
 
-        // Make folder accessible to user
-        // If email is provided, share with that user (Writer).
-        // If not, share publicly (Writer) - fallback.
-        await shareFolder(projectFolderId, userEmail || undefined);
+        // Make folder accessible to user (public link)
+        await shareFolder(projectFolderId);
 
         // 3. Create spreadsheet inside project folder
         const spreadsheetName = `${projectName}_Trans`;
