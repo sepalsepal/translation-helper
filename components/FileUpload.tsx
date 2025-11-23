@@ -257,25 +257,12 @@ export default function FileUpload() {
                             </button>
                         </div>
 
-                        {/* Status Message Area */}
-                        {createStatus.message && (
-                            <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${createStatus.type === 'error' ? 'bg-red-50 text-red-500' :
-                                createStatus.type === 'success' ? 'bg-green-50 text-line-green' : 'bg-gray-50 text-gray-500'
-                                }`}>
-                                {createStatus.message}
-                                {createStatus.link && (
-                                    <a href={createStatus.link} target="_blank" rel="noopener noreferrer" className="block mt-1 underline">
-                                        📂 구글 드라이브에서 확인하기
-                                    </a>
-                                )}
-                            </div>
-                        )}
 
                         <div className="flex justify-between items-center mt-2 ml-1">
                             <p className="text-[10px] text-gray-400">
                                 * 이름을 입력하고 엔터(Enter)를 누르거나 생성 버튼을 클릭하세요.
                             </p>
-                            <span className="text-[10px] text-gray-300">v1.7 (Debug)</span>
+                            <span className="text-[10px] text-gray-300">v1.8 (Notice)</span>
                         </div>
                     </div>
                 ) : (
@@ -307,6 +294,30 @@ export default function FileUpload() {
                     </div>
                 )}
             </div>
+
+            {/* Status Message Area - Persistent */}
+            {createStatus.message && (
+                <div className={`mb-8 p-4 rounded-xl text-sm font-bold flex justify-between items-start gap-3 ${createStatus.type === 'error' ? 'bg-red-50 text-red-500' :
+                    createStatus.type === 'success' ? 'bg-green-50 text-line-green' : 'bg-gray-50 text-gray-500'
+                    }`}>
+                    <div className="flex-1">
+                        {createStatus.message}
+                        {createStatus.link && (
+                            <a href={createStatus.link} target="_blank" rel="noopener noreferrer" className="block mt-2 underline text-line-green hover:text-[#05b34c]">
+                                📂 구글 드라이브에서 확인하기
+                            </a>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setCreateStatus({ type: null, message: '' })}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            )}
 
             <hr className="border-gray-100 my-8" />
 
